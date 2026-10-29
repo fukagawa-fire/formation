@@ -16,14 +16,14 @@ h1{font-size:17px;margin:4px 0 8px}
 #top{grid-area:1/2;background:var(--ok)!important}#bot{grid-area:3/2;background:var(--ok)!important}
 #cor{grid-area:1/3;background:var(--ok)!important}#corB{grid-area:3/3;background:var(--ok)!important}
 .chip{width:50px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:10px;font-weight:700;color:#fff;line-height:1.05;user-select:none;z-index:2;border:3px solid transparent}
-.m{background:var(--boy)}.f{background:var(--girl)}.A{border-color:var(--gold)}
+.m{background:var(--boy)}.f{background:var(--girl)}
 #in .chip{cursor:pointer;box-shadow:0 0 0 2px var(--fg) inset}
 .btns{display:flex;gap:8px;margin:10px 0}button{flex:1;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:14px;font-weight:600}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;line-height:1.7}.panel b{display:inline-block;min-width:6.5em}
 .hint{font-size:12px;opacity:.7;margin:4px 0}
 </style></head><body>
-<h1>🔥 FUKAGAWA FIRE FORMATION<br><small style="font-size:11px;opacity:.7;font-weight:600">深川ファイヤー 陣形マップ ｜ v<span id="ver">1.2</span></small></h1>
-<div class="hint">内野の選手をタップ ＝ 当たって外野へ。金の枠＝あさひ（センター死守）</div>
+<h1>🔥 FUKAGAWA FIRE FORMATION<br><small style="font-size:11px;opacity:.7;font-weight:600">深川ファイヤー 陣形マップ ｜ v<span id="ver">1.4</span></small></h1>
+<div class="hint">内野の選手をタップ ＝ 当たって外野へ。あさひ・こうた＝センターメイン</div>
 <div class="court">
 <div id="red1"><span class="lab">進入禁止</span></div><div id="top"><span class="lab">外野：上</span></div><div id="cor"><span class="lab">カド</span></div>
 <div id="in"><span class="lab">内野 後ろ(女子)｜前(男子)→</span><div class="col" id="inB"></div><div class="col" id="inF"></div></div><div id="opp"><span class="lab">相手内野</span></div><div id="ctr"><span class="lab">センター</span></div>
@@ -85,9 +85,38 @@ function pairM(s){
     s[z].push(m);
   });
 }
+function strongC(s){
+  if(s.ctr.includes(A)||s.ctr.includes('こうた'))return;
+  const x=s.ctr.find(n=>n==='かんたろう'||n==='ゆうせい');
+  const z=SIDES.find(z=>s[z].includes('せい'));
+  if(!x||!z)return;
+  s.ctr=s.ctr.map(n=>n===x?'せい':n);
+  s[z]=s[z].map(n=>n==='せい'?x:n);
+}
+function sideSup(s){
+  if(!(s.ctr.includes(A)&&s.ctr.includes('こうた')))return;
+  const sd=n=>SIDES.find(z=>s[z].includes(n));
+  for(const x of ['かんたろう','ゆうせい']){
+    if(!s.ctr.includes(x))continue;
+    const mz=sd('まひろ'),sz=sd('せい');
+    const t=(mz&&s[mz].every(n=>n==='まひろ'))?mz:(sz||mz);
+    if(!t)continue;
+    s.ctr=s.ctr.filter(n=>n!==x);s[t].push(x);
+  }
+}
+const tier=n=>isF(n)?9:(n===A||n==='こうた')?1:M.includes(n)?2:3;
+function tierSwap(s){
+  if(outs(s).length!==3||s.ctr.length!==1||s.top.length!==1||s.bot.length!==1)return;
+  const c=s.ctr[0],z=tier(s.top[0])<=tier(s.bot[0])?'top':'bot';
+  const b=s[z][0];
+  if(tier(b)<tier(c)){s.ctr=[b];s[z]=[c]}
+}
 function norm(s){
+  tierSwap(s);
+  strongC(s);
   if(outs(s).length<4)return;
   pairM(s);
+  sideSup(s);
   for(const z of SIDES){
     if(!s[z].some(isF)||s[z].some(m=>!isF(m)))continue;
     const c=s.ctr.filter(m=>m!==A&&!isF(m));
@@ -128,7 +157,7 @@ function info(){
    `<div><b>女子ルール</b>${gt}</div>`+
    `<div><b>横攻撃待機</b>${lt}</div>`+
    `<div><b>カド配置</b>${(S.cor[0]||S.corB[0])?(S.cor[0]||S.corB[0])+'（7人目・あさひ側）':'なし（外野7人で発動）'}</div>`+
-   `<div><b>あさひ</b>${loc(A)}${S.ctr[0]===A&&o>=4?'（センター死守）':''}</div>`;
+   `<div><b>あさひ</b>${loc(A)}（センターメイン）</div><div><b>こうた</b>${loc('こうた')}（センターメイン）</div>`;
 }
 document.getElementById('undo').onclick=()=>{if(H.length){S=JSON.parse(H.pop());render()}};
 document.getElementById('reset').onclick=()=>{S=init();H=[];render()};
