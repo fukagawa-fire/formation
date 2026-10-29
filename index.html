@@ -22,7 +22,7 @@ h1{font-size:17px;margin:4px 0 8px}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;line-height:1.7}.panel b{display:inline-block;min-width:6.5em}
 .hint{font-size:12px;opacity:.7;margin:4px 0}
 </style></head><body>
-<h1>🔥 FUKAGAWA FIRE FORMATION<br><small style="font-size:11px;opacity:.7;font-weight:600">深川ファイヤー 陣形マップ ｜ v<span id="ver">1.7</span></small></h1>
+<h1>🔥 FUKAGAWA FIRE FORMATION<br><small style="font-size:11px;opacity:.7;font-weight:600">深川ファイヤー 陣形マップ ｜ v<span id="ver">1.14</span></small></h1>
 <div class="hint">内野の選手をタップ ＝ 当たって外野へ。あさひ・こうた＝センターメイン</div>
 <div class="court">
 <div id="red1"><span class="lab">進入禁止</span></div><div id="top"><span class="lab">外野：上</span></div><div id="cor"><span class="lab">カド</span></div>
@@ -45,8 +45,8 @@ function place(s,p){
   if(CM.includes(p)){s.ctr.splice(p===A?0:(s.ctr[0]===A?1:0),0,p);return}
   if(total===7&&isF(p)){const g=SIDES.find(z=>s[z].some(isF));const z=g?SIDES.find(x=>x!==g):(s.top.length<=s.bot.length?'top':'bot');s[z].push(p);return}
   if(total===7){
-    if(M.includes(p)){const z=SIDES.find(z=>s[z].some(n=>!isF(n)&&!M.includes(n)&&n!==A));
-      if(z){const o=s[z].find(n=>!isF(n)&&!M.includes(n)&&n!==A);s[z]=s[z].map(n=>n===o?p:n);const i=s.ctr.indexOf(A);(i>=0?i>(s.ctr.length-1)/2:z==='bot')?s.corB.push(o):s.cor.push(o);return}}
+    if(M.includes(p)){const z=SIDES.filter(z=>s[z].some(n=>!isF(n)&&!M.includes(n)&&!CM.includes(n))).sort((a,b)=>s[a].some(n=>M.includes(n))-s[b].some(n=>M.includes(n)))[0];
+      if(z){const o=s[z].find(n=>!isF(n)&&!M.includes(n)&&!CM.includes(n));s[z]=s[z].map(n=>n===o?p:n);const i=s.ctr.indexOf(A);(i>=0?i>(s.ctr.length-1)/2:z==='bot')?s.corB.push(o):s.cor.push(o);return}}
     const i=s.ctr.indexOf(A);(i>=0&&i>(s.ctr.length-1)/2?s.corB:s.cor).push(p);return}
   const e=SIDES.find(z=>!s[z].length);if(e){s[e].push(p);return}
   if(isF(p)){
@@ -55,8 +55,9 @@ function place(s,p){
     s[z].push(p);return}
   const gs=SIDES.find(z=>s[z].some(isF)&&!s[z].some(n=>!isF(n)));
   if(gs){s[gs].push(p);return}
+  if(M.includes(p)&&s.ctr.includes(A)&&s.ctr.includes('こうた')){const f=SIDES.find(z=>!s[z].some(n=>M.includes(n)));s[f||(s.top.length<=s.bot.length?'top':'bot')].push(p);return}
   if(M.includes(p)){
-    const z=SIDES.find(z=>s[z].some(n=>!isF(n)&&!M.includes(n)&&n!==A));
+    const z=SIDES.filter(z=>s[z].some(n=>!isF(n)&&!M.includes(n)&&!CM.includes(n))).sort((a,b)=>s[a].some(n=>M.includes(n))-s[b].some(n=>M.includes(n)))[0];
     if(z){const o=s[z].find(n=>!isF(n)&&!M.includes(n));s[z]=s[z].map(n=>n===o?p:n);s.ctr.push(o);return}
   }
   s.ctr.push(p);
@@ -66,7 +67,8 @@ function girlToSide(s,n,z,i){
   let c=(g?SIDES.filter(x=>x!==g):SIDES).filter(x=>s[x].some(m=>!isF(m)));
   if(!c.length)c=SIDES.filter(x=>s[x].some(m=>!isF(m)));
   if(!c.length)return;
-  const t=c[0],ms=s[t].filter(m=>!isF(m));
+  const tr=x=>Math.min(...s[x].filter(m=>!isF(m)).map(tier));
+  const t=c.slice().sort((a,b)=>tr(a)-tr(b))[0],ms=s[t].filter(m=>!isF(m));
   s[t]=s[t].filter(isF);s[t].push(n);
   s[z][i]=ms[0];ms.slice(1).forEach(m=>s.ctr.push(m));
 }
@@ -80,7 +82,7 @@ function pairM(s){
   const free=SIDES.filter(z=>!s[z].some(n=>M.includes(n)));
   ms.forEach((m,i)=>{
     const z=free[i];if(!z)return;
-    const mz=loc(m),o=s[z].find(n=>!isF(n));
+    const mz=loc(m),o=s[z].find(n=>!isF(n)&&!CM.includes(n));
     if(!o&&mz==='ctr'&&s.ctr.length<2)return;
     if(o){s[z]=s[z].filter(n=>n!==o);s[mz]=s[mz].map(n=>n===m?o:n)}else s[mz]=s[mz].filter(n=>n!==m);
     s[z].push(m);
@@ -100,7 +102,8 @@ function sideSup(s){
   for(const x of ['かんたろう','ゆうせい']){
     if(!s.ctr.includes(x))continue;
     const mz=sd('まひろ'),sz=sd('せい');
-    const t=(mz&&s[mz].every(n=>n==='まひろ'))?mz:(sz||mz);
+    const mc=z=>s[z].filter(n=>!isF(n)).length;
+    let t=(mz&&s[mz].every(n=>n==='まひろ')&&mc(mz)<2)?mz:SIDES.filter(z=>mc(z)<2).sort((a,b)=>s[a].length-s[b].length||((b===sz)-(a===sz)))[0];
     if(!t)continue;
     s.ctr=s.ctr.filter(n=>n!==x);s[t].push(x);
   }
